@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>TSF // LIVE MONITOR</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#040810;--bg2:#070d1a;--panel:#0a1120;--panel2:#0d1528;
+  --border:#0f2040;--border-glow:#1a3a6a;
+  --cyan:#00f5ff;--cyan-dim:#004f55;
+  --green:#00ff88;--green-dim:#004422;
+  --orange:#ff8c00;--orange-dim:#3d2200;
+  --red:#ff2244;--red-dim:#3d0010;
+  --yellow:#ffe000;--purple:#b44fff;
+  --text:#c8e0ff;--text-dim:#5a8aaa;--text-bright:#ffffff;
+  --font-hud:'Orbitron',monospace;--font-body:'Rajdhani',sans-serif;--font-mono:'Share Tech Mono',monospace;
+  --glow-cyan:0 0 8px #00f5ff88,0 0 20px #00f5ff33;
+  --glow-green:0 0 8px #00ff8888,0 0 20px #00ff8833;
+  --glow-red:0 0 8px #ff224488,0 0 20px #ff224433;
+  --glow-orange:0 0 8px #ff8c0088,0 0 20px #ff8c0033;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{height:100%;background:var(--bg);}
+body{
+  min-height:100%;
+  background:radial-gradient(ellipse 80% 40% at 50% 0%,#001428 0%,transparent 70%),
+             radial-gradient(ellipse 60% 30% at 80% 100%,#00102a 0%,transparent 60%),var(--bg);
+  color:var(--text);font-family:var(--font-body);font-size:14px;overflow-x:hidden;
+}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.04) 2px,rgba(0,0,0,0.04) 4px);
+}
+.shell{display:flex;flex-direction:column;min-height:100vh;}
+
+/* TOPBAR */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  height:56px;padding:0 24px;
+  background:linear-gradient(180deg,#060f1e 0%,#040810 100%);
+  border-bottom:1px solid var(--cyan-dim);
+  box-shadow:0 1px 0 #00f5ff22,0 4px 20px #00000080;
+}
+.brand{
+  font-family:var(--font-hud);font-size:1rem;font-weight:900;
+  letter-spacing:3px;text-transform:uppercase;color:var(--cyan);
+  text-shadow:var(--glow-cyan);display:flex;align-items:center;gap:12px;
+}
+.brand-sub{
+  font-family:var(--font-mono);font-size:0.6rem;color:#6ab0cc;
+  letter-spacing:1.5px;border-left:1px solid var(--border-glow);padding-left:12px;
+}
+.topbar-right{display:flex;align-items:center;gap:16px;}
+.live-badge{
+  display:flex;align-items:center;gap:6px;font-family:var(--font-hud);font-size:0.6rem;
+  font-weight:700;letter-spacing:2px;color:var(--green);text-shadow:var(--glow-green);
+  border:1px solid var(--green);box-shadow:var(--glow-green);padding:4px 12px;border-radius:2px;
+}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:var(--glow-green);animation:pulse-dot 1.2s infinite;}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.3;transform:scale(0.7);}}
+#clock{font-family:var(--font-mono);font-size:0.85rem;color:var(--cyan);text-shadow:var(--glow-cyan);letter-spacing:1px;}
+.mute-btn{
+  font-family:var(--font-hud);font-size:0.6rem;letter-spacing:1px;text-transform:uppercase;
+  background:transparent;border:1px solid var(--border-glow);color:#7ec8e3;
+  padding:5px 12px;border-radius:2px;cursor:pointer;transition:border-color .2s,color .2s,box-shadow .2s;
+}
+.mute-btn:hover,.mute-btn.active{border-color:var(--cyan);color:var(--cyan);box-shadow:var(--glow-cyan);}
+
+/* CONTENT */
+.content{flex:1;padding:20px 24px;display:flex;flex-direction:column;gap:16px;}
+.sec-label{
+  font-family:var(--font-hud);font-size:0.58rem;font-weight:700;letter-spacing:3px;
+  text-transform:uppercase;color:#7ec8e3;display:flex;align-items:center;gap:10px;margin-bottom:-4px;
+}
+.sec-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border-glow),transparent);}
+.sec-num{color:var(--cyan);text-shadow:var(--glow-cyan);}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
+.kpi{
+  background:var(--panel);border:1px solid var(--border);position:relative;padding:14px 16px;
+  clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));
+  transition:border-color .3s,box-shadow .3s;overflow:hidden;
+}
+.kpi::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--kpi-color,var(--cyan));box-shadow:0 0 12px var(--kpi-color,var(--cyan));
+}
+.kpi::after{
+  content:'';position:absolute;top:0;left:0;width:100%;height:100%;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--kpi-color,var(--cyan)) 6%,transparent) 0%,transparent 50%);
+  pointer-events:none;
+}
+.kpi.cyan{--kpi-color:var(--cyan);border-color:var(--cyan-dim);}
+.kpi.green{--kpi-color:var(--green);border-color:var(--green-dim);}
+.kpi.orange{--kpi-color:var(--orange);border-color:var(--orange-dim);}
+.kpi.purple{--kpi-color:var(--purple);border-color:#2a1040;}
+.kpi.yellow{--kpi-color:var(--yellow);border-color:#3d3000;}
+.kpi.alert-glow{border-color:var(--orange);box-shadow:var(--glow-orange),inset 0 0 20px #ff8c0008;}
+.kpi.danger-glow{border-color:var(--red);box-shadow:var(--glow-red),inset 0 0 20px #ff224408;animation:danger-pulse 1s infinite;}
+@keyframes danger-pulse{0%,100%{box-shadow:var(--glow-red),inset 0 0 20px #ff224408;}50%{box-shadow:0 0 20px #ff224499,inset 0 0 40px #ff224415;}}
+.kpi-tag{font-family:var(--font-hud);font-size:0.52rem;font-weight:600;letter-spacing:2px;color:var(--kpi-color,var(--cyan));text-transform:uppercase;margin-bottom:8px;opacity:.7;}
+.kpi-val{font-family:var(--font-hud);font-size:1.9rem;font-weight:900;color:var(--text-bright);line-height:1;text-shadow:0 0 20px var(--kpi-color,var(--cyan))44;}
+.kpi-unit{font-family:var(--font-mono);font-size:0.65rem;color:#8ab4d4;margin-left:3px;}
+.kpi-delta{font-family:var(--font-mono);font-size:0.65rem;margin-top:5px;transition:color .3s;}
+.kpi-delta.up{color:var(--red);}.kpi-delta.down{color:var(--green);}.kpi-delta.flat{color:#6ab0cc;}
+@keyframes kpi-flash{0%{background:var(--panel);}20%{background:color-mix(in srgb,var(--kpi-color,var(--cyan)) 12%,var(--panel));}100%{background:var(--panel);}}
+.kpi.flash{animation:kpi-flash 0.4s ease;}
+
+/* CHARTS */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.chart-card{
+  background:var(--panel);border:1px solid var(--border);padding:14px 16px;position:relative;
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));
+}
+.chart-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--chart-accent,var(--cyan)),transparent);
+}
+.chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.chart-title{font-family:var(--font-hud);font-size:0.58rem;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--chart-accent,var(--cyan));text-shadow:0 0 8px var(--chart-accent,var(--cyan))66;}
+.chart-pts{font-family:var(--font-mono);font-size:0.6rem;color:#7ec8e3;background:var(--panel2);border:1px solid var(--border);padding:2px 7px;border-radius:2px;}
+.chart-wrap{position:relative;height:160px;}
+.c-level{--chart-accent:var(--cyan);}.c-turb{--chart-accent:var(--orange);}.c-flow{--chart-accent:var(--purple);}.c-pct{--chart-accent:var(--green);}
+
+/* RISK PANEL */
+.risk-row{display:grid;grid-template-columns:200px 1fr 1fr;gap:12px;}
+.risk-main{
+  background:var(--panel);border:1px solid var(--border);padding:18px 16px;text-align:center;
+  clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));
+  position:relative;transition:border-color .4s,box-shadow .4s;
+}
+.risk-main::before{
+  content:'COMPOSITE RISK';position:absolute;top:10px;left:0;right:0;
+  font-family:var(--font-hud);font-size:0.5rem;letter-spacing:2.5px;color:var(--text-dim);
+}
+.risk-num{font-family:var(--font-hud);font-size:3.8rem;font-weight:900;line-height:1;margin-top:24px;transition:color .4s,text-shadow .4s;color:var(--green);text-shadow:var(--glow-green);}
+.risk-lbl{font-family:var(--font-hud);font-size:0.75rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin-top:4px;transition:color .4s;}
+.risk-bar-wrap{margin-top:12px;height:6px;background:var(--panel2);border:1px solid var(--border);overflow:hidden;}
+.risk-bar-fill{height:100%;transition:width .6s ease,background .4s;background:var(--green);box-shadow:0 0 8px currentColor;}
+.risk-weight-hint{margin-top:10px;font-family:var(--font-mono);font-size:0.55rem;color:#6ab0cc;letter-spacing:.5px;line-height:1.8;}
+.risk-main.alert-glow{border-color:var(--orange);box-shadow:var(--glow-orange);}
+.risk-main.danger-glow{border-color:var(--red);box-shadow:var(--glow-red);animation:danger-pulse 1s infinite;}
+
+/* SENSOR BARS */
+.sensor-panel{
+  background:var(--panel);border:1px solid var(--border);padding:14px 16px;
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));
+}
+.sp-title{font-family:var(--font-hud);font-size:0.55rem;letter-spacing:2.5px;color:#7ec8e3;text-transform:uppercase;margin-bottom:14px;}
+.sbar{margin-bottom:14px;}.sbar:last-child{margin-bottom:0;}
+.sbar-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;}
+.sbar-name{font-family:var(--font-hud);font-size:0.58rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text);}
+.sbar-score{font-family:var(--font-mono);font-size:.7rem;color:#8ac8e8;}
+.sbar-track{height:5px;background:var(--panel2);border:1px solid var(--border);overflow:hidden;}
+.sbar-fill{height:100%;transition:width .6s ease,background .4s;box-shadow:0 0 6px currentColor;}
+
+/* LOG */
+.log-panel{
+  background:var(--panel);border:1px solid var(--border);padding:14px 16px;
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));
+  display:flex;flex-direction:column;
+}
+.log-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.log-title{font-family:var(--font-hud);font-size:0.55rem;letter-spacing:2.5px;color:#7ec8e3;text-transform:uppercase;}
+.log-count{font-family:var(--font-mono);font-size:.6rem;color:#6ab0cc;}
+.log-body{flex:1;overflow-y:auto;height:110px;font-family:var(--font-mono);font-size:.68rem;line-height:2;}
+.log-body::-webkit-scrollbar{width:3px;}.log-body::-webkit-scrollbar-thumb{background:var(--border-glow);}
+.log-row{display:flex;gap:10px;border-bottom:1px solid #ffffff04;}
+.log-ts{color:#6ab0cc;white-space:nowrap;flex-shrink:0;}
+.log-msg{color:#d0e8ff;}
+.log-msg.warn{color:var(--orange);text-shadow:0 0 6px var(--orange)44;}
+.log-msg.ok{color:var(--green);text-shadow:0 0 6px var(--green)44;}
+.log-msg.err{color:var(--red);text-shadow:0 0 6px var(--red)44;animation:err-flash .5s;}
+@keyframes err-flash{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+/* STATUS BAR */
+.statusbar{
+  display:flex;align-items:center;gap:20px;padding:8px 24px;
+  background:var(--bg2);border-top:1px solid var(--border);
+  font-family:var(--font-mono);font-size:.65rem;color:#7ab8d8;
+}
+.statusbar b{color:#00f5ff;text-shadow:var(--glow-cyan);}.sep{color:var(--border-glow);}
+#conn-status{margin-left:auto;display:flex;align-items:center;gap:6px;}
+.conn-dot{width:6px;height:6px;border-radius:50%;}
+.conn-dot.connected{background:var(--green);box-shadow:var(--glow-green);}
+.conn-dot.disconnected{background:var(--red);box-shadow:var(--glow-red);}
+.conn-dot.connecting{background:var(--orange);box-shadow:var(--glow-orange);animation:pulse-dot .8s infinite;}
+
+/* BOOT */
+.boot-overlay{
+  position:fixed;inset:0;z-index:1000;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  animation:boot-fade .5s ease 1.8s forwards;
+}
+@keyframes boot-fade{to{opacity:0;pointer-events:none;}}
+.boot-title{
+  font-family:var(--font-hud);font-size:1.4rem;font-weight:900;
+  letter-spacing:6px;color:var(--cyan);text-shadow:var(--glow-cyan);
+  animation:glitch .08s infinite;
+}
+@keyframes glitch{
+  0%{text-shadow:var(--glow-cyan);}25%{text-shadow:2px 0 var(--red),-2px 0 var(--green);}
+  50%{text-shadow:var(--glow-cyan);}75%{text-shadow:-1px 0 var(--red);}100%{text-shadow:var(--glow-cyan);}
+}
+.boot-bar-wrap{width:280px;height:4px;background:var(--panel);border:1px solid var(--border-glow);}
+.boot-bar{height:100%;background:var(--cyan);box-shadow:var(--glow-cyan);animation:boot-load 1.6s ease forwards;}
+@keyframes boot-load{from{width:0}to{width:100%}}
+.boot-status{font-family:var(--font-mono);font-size:.65rem;color:#7ec8e3;letter-spacing:1px;}
+</style>
+</head>
+<body>
+
+<!-- Boot splash -->
+<div class="boot-overlay" id="boot">
+  <div class="boot-title">TSF // LIVE MONITOR</div>
+  <div class="boot-bar-wrap"><div class="boot-bar"></div></div>
+  <div class="boot-status" id="boot-status">INITIALISING SUBSYSTEMS…</div>
+</div>
+
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      ⬡ TSF//MONITOR
+      <span class="brand-sub">AI·IOT · LAURENTIAN UNIV.</span>
+    </div>
+    <div class="topbar-right">
+      <div class="live-badge"><div class="live-dot"></div>LIVE SSE</div>
+      <div id="clock">00:00:00</div>
+      <button class="mute-btn active" id="mute-btn" onclick="toggleMute()">🔔 SND ON</button>
+    </div>
+  </header>
+
+  <main class="content">
+    <div class="sec-label"><span class="sec-num">[01]</span> SENSOR READINGS</div>
+    <div class="kpi-row">
+      <div class="kpi cyan" id="kpi-level">
+        <div class="kpi-tag">Proximity (cm)</div>
+        <div><span class="kpi-val" id="v-level">—</span><span class="kpi-unit">cm</span></div>
+        <div class="kpi-delta flat" id="d-level">● —</div>
+      </div>
+      <div class="kpi green" id="kpi-pct">
+        <div class="kpi-tag">Level %</div>
+        <div><span class="kpi-val" id="v-pct">—</span><span class="kpi-unit">%</span></div>
+        <div class="kpi-delta flat" id="d-pct">● —</div>
+      </div>
+      <div class="kpi purple" id="kpi-flow">
+        <div class="kpi-tag">Flow Rate</div>
+        <div><span class="kpi-val" id="v-flow">—</span><span class="kpi-unit">L/min</span></div>
+        <div class="kpi-delta flat" id="d-flow">● —</div>
+      </div>
+      <div class="kpi orange" id="kpi-turb">
+        <div class="kpi-tag">Turbidity</div>
+        <div><span class="kpi-val" id="v-turb">—</span><span class="kpi-unit">NTU</span></div>
+        <div class="kpi-delta flat" id="d-turb">● —</div>
+      </div>
+      <div class="kpi yellow" id="kpi-risk">
+        <div class="kpi-tag">Risk Score</div>
+        <div><span class="kpi-val" id="v-risk">—</span><span class="kpi-unit">/ 100</span></div>
+        <div class="kpi-delta flat" id="d-risk">● NORMAL</div>
+      </div>
+    </div>
+
+    <div class="sec-label"><span class="sec-num">[02]</span> TIME SERIES FEED</div>
+    <div class="chart-grid">
+      <div class="chart-card c-level">
+        <div class="chart-head"><span class="chart-title">Proximity / Distance (cm)</span><span class="chart-pts" id="pts-level">0 pts</span></div>
+        <div class="chart-wrap"><canvas id="chart-level"></canvas></div>
+      </div>
+      <div class="chart-card c-turb">
+        <div class="chart-head"><span class="chart-title">Turbidity (NTU)</span><span class="chart-pts" id="pts-turb">0 pts</span></div>
+        <div class="chart-wrap"><canvas id="chart-turb"></canvas></div>
+      </div>
+      <div class="chart-card c-flow">
+        <div class="chart-head"><span class="chart-title">Flow Rate (L/min)</span><span class="chart-pts" id="pts-flow">0 pts</span></div>
+        <div class="chart-wrap"><canvas id="chart-flow"></canvas></div>
+      </div>
+      <div class="chart-card c-pct">
+        <div class="chart-head"><span class="chart-title">Level %</span><span class="chart-pts" id="pts-pct">0 pts</span></div>
+        <div class="chart-wrap"><canvas id="chart-pct"></canvas></div>
+      </div>
+    </div>
+
+    <div class="sec-label"><span class="sec-num">[03]</span> COMPOSITE RISK MATRIX</div>
+    <div class="risk-row">
+      <div class="risk-main" id="risk-main">
+        <div class="risk-num" id="risk-num">0</div>
+        <div class="risk-lbl" id="risk-lbl" style="color:var(--green)">NORMAL</div>
+        <div class="risk-bar-wrap"><div class="risk-bar-fill" id="gauge-fill" style="width:0%;background:var(--green)"></div></div>
+        <div class="risk-weight-hint">LEVEL · 50%<br>TURBIDITY · 30%<br>FLOW · 20%</div>
+      </div>
+      <div class="sensor-panel">
+        <div class="sp-title">Per-Sensor Risk Scores</div>
+        <div class="sbar">
+          <div class="sbar-top"><span class="sbar-name">Proximity (cm)</span><span class="sbar-score" id="sb-v-level">0</span></div>
+          <div class="sbar-track"><div class="sbar-fill" id="sb-level" style="width:0%;background:var(--green)"></div></div>
+        </div>
+        <div class="sbar">
+          <div class="sbar-top"><span class="sbar-name">Turbidity</span><span class="sbar-score" id="sb-v-turb">0</span></div>
+          <div class="sbar-track"><div class="sbar-fill" id="sb-turb" style="width:0%;background:var(--green)"></div></div>
+        </div>
+        <div class="sbar">
+          <div class="sbar-top"><span class="sbar-name">Flow Rate</span><span class="sbar-score" id="sb-v-flow">0</span></div>
+          <div class="sbar-track"><div class="sbar-fill" id="sb-flow" style="width:0%;background:var(--green)"></div></div>
+        </div>
+      </div>
+      <div class="log-panel">
+        <div class="log-head"><span class="log-title">Event Log</span><span class="log-count" id="log-count">0 events</span></div>
+        <div class="log-body" id="log-body"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="statusbar">
+    <span>SAMPLES <b id="sb-total">0</b></span>
+    <span class="sep">|</span>
+    <span>LAST <b id="sb-last">—</b></span>
+    <span class="sep">|</span>
+    <span>INTERVAL <b id="sb-interval">—</b></span>
+    <span id="conn-status">
+      <div class="conn-dot connecting" id="conn-dot"></div>
+      <span id="conn-text">CONNECTING…</span>
+    </span>
+  </footer>
+</div>
+
+<script>
+// level_cm: ultrasonic distance — LOWER value = object CLOSER = more dangerous
+// alert/critical are MAXIMUM SAFE distances; below these thresholds triggers alert
+const THRESHOLDS={
+  level_cm:{alert:40,critical:20, inverted:true}, // cm — alert if <40cm, critical if <20cm
+  turb_ntu:{alert:3.0,critical:5.0},
+  flow_lpm:{alert:8.0,critical:12.0}
+};
+const WEIGHTS={level_cm:0.5,turb_ntu:0.3,flow_lpm:0.2};
+const MAX_POINTS=120;
+
+// ── Sound engine ──────────────────────────────────────────────────
+const _audio={
+  ctx:null,_lastLabel:null,_unlocked:false,
+  unlock(){if(this._unlocked)return;this.ctx=new(window.AudioContext||window.webkitAudioContext)();this._unlocked=true;},
+  _beep(freq,durationMs,volume=0.35,startAt=0){
+    if(!this.ctx)return;
+    const osc=this.ctx.createOscillator(),gain=this.ctx.createGain();
+    osc.connect(gain);gain.connect(this.ctx.destination);
+    osc.type='sine';osc.frequency.setValueAtTime(freq,this.ctx.currentTime+startAt);
+    const t0=this.ctx.currentTime+startAt,t1=t0+durationMs/1000;
+    gain.gain.setValueAtTime(0,t0);gain.gain.linearRampToValueAtTime(volume,t0+0.01);
+    gain.gain.setValueAtTime(volume,t1-0.02);gain.gain.linearRampToValueAtTime(0,t1);
+    osc.start(t0);osc.stop(t1);
+  },
+  playNormal(){if(!this.ctx)return;this._beep(523,120,0.25,0.00);this._beep(523,120,0.25,0.20);},
+  playAlert(){if(!this.ctx)return;this._beep(880,180,0.50,0.00);this._beep(880,180,0.50,0.26);this._beep(880,180,0.50,0.52);},
+  onRiskChange(newLabel){
+    if(newLabel===this._lastLabel)return;
+    const prev=this._lastLabel;this._lastLabel=newLabel;
+    if(!this._unlocked)return;
+    const a=new Set(['Alert','High','Critical']);
+    if(a.has(newLabel))this.playAlert();
+    else if(prev&&a.has(prev)&&newLabel==='Normal')this.playNormal();
+  },
+};
+document.addEventListener('click',()=>_audio.unlock(),{once:false});
+document.addEventListener('keydown',()=>_audio.unlock(),{once:false});
+
+let _muted=false;
+const _origOnRiskChange=_audio.onRiskChange.bind(_audio);
+function toggleMute(){
+  _muted=!_muted;
+  const btn=document.getElementById('mute-btn');
+  if(_muted){btn.textContent='🔕 SND OFF';btn.classList.remove('active');_audio.onRiskChange=()=>{};}
+  else{btn.textContent='🔔 SND ON';btn.classList.add('active');_audio.onRiskChange=_origOnRiskChange;}
+}
+
+// ── Charts ────────────────────────────────────────────────────────
+Chart.defaults.color='#8ab4d4';
+Chart.defaults.borderColor='#0f2040';
+
+function makeChart(id,label,color){
+  const ctx=document.getElementById(id).getContext('2d');
+  const grad=ctx.createLinearGradient(0,0,0,160);
+  grad.addColorStop(0,color+'33');grad.addColorStop(1,color+'00');
+  return new Chart(ctx,{
+    type:'line',
+    data:{labels:[],datasets:[{label,data:[],borderColor:color,backgroundColor:grad,fill:true,tension:0.4,pointRadius:0,pointHitRadius:10,borderWidth:2}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,animation:{duration:0},
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{maxTicksLimit:5,maxRotation:0,color:'#7ec8e3',font:{family:"'Share Tech Mono'",size:11}},grid:{color:'#122038'}},
+        y:{ticks:{maxTicksLimit:4,color:'#7ec8e3',font:{family:"'Share Tech Mono'",size:11}},grid:{color:'#122038'}},
+      },
+    }
+  });
+}
+const charts={
+  level:makeChart('chart-level','Level','#00f5ff'),
+  turb: makeChart('chart-turb', 'Turbidity','#ff8c00'),
+  flow: makeChart('chart-flow', 'Flow','#b44fff'),
+  pct:  makeChart('chart-pct',  'Level %','#00ff88'),
+};
+
+// ── Risk scoring ──────────────────────────────────────────────────
+function sensorScore(val,sensor){
+  const t=THRESHOLDS[sensor];if(!t||isNaN(val))return 0;
+  if(t.inverted){
+    // Ultrasonic/proximity: LOWER distance = object CLOSER = HIGHER danger
+    if(val>=t.alert)return Math.max(0,Math.min(33,(1-(val-t.alert)/Math.max(1,300-t.alert))*33));
+    if(val>=t.critical)return 33+((t.alert-val)/(t.alert-t.critical))*33;
+    return Math.min(100,66+((t.critical-val)/Math.max(1,t.critical))*34);
+  }
+  if(val<=t.alert)return(val/t.alert)*33;
+  if(val<=t.critical)return 33+((val-t.alert)/(t.critical-t.alert))*33;
+  return Math.min(100,66+((val-t.critical)/t.critical)*34);
+}
+function compositeScore(level,turb,flow){
+  return WEIGHTS.level_cm*sensorScore(level,'level_cm')+WEIGHTS.turb_ntu*sensorScore(turb,'turb_ntu')+WEIGHTS.flow_lpm*sensorScore(flow,'flow_lpm');
+}
+function scoreLabel(score){
+  if(score<33)return{label:'Normal',color:'#00ff88'};
+  if(score<66)return{label:'Alert',color:'#ff8c00'};
+  if(score<85)return{label:'High',color:'#ff5500'};
+  return{label:'Critical',color:'#ff2244'};
+}
+function barColor(score){return scoreLabel(score).color;}
+
+// ── State ─────────────────────────────────────────────────────────
+let totalSamples=0,logCount=0,prevRow=null,lastTs=null,intervalMs=null;
+
+function setText(id,v){const el=document.getElementById(id);if(el)el.textContent=v;}
+
+function setKPI(valId,deltaId,cardId,newVal,fmt,unit){
+  const el=document.getElementById(valId),dl=document.getElementById(deltaId);
+  if(!el)return;
+  el.textContent=fmt!==null?newVal.toFixed(fmt):newVal;
+  if(prevRow&&prevRow[unit]!==undefined){
+    const diff=newVal-prevRow[unit];
+    // For ultrasonic (inverted): distance decreasing = object closer = danger (red/up class)
+    const inverted=THRESHOLDS[unit]&&THRESHOLDS[unit].inverted;
+    const dangerDir=inverted?diff<0:diff>0; // closer for ultrasonic, higher for others
+    const cls=diff===0?'flat':dangerDir?'up':'down';
+    const arrow=diff>0?'▲':diff<0?'▼':'●';
+    dl.className=`kpi-delta ${cls}`;dl.textContent=`${arrow} ${Math.abs(diff).toFixed(fmt||1)}`;
+  }
+  const card=document.getElementById(cardId);
+  if(card){card.classList.add('flash');setTimeout(()=>card.classList.remove('flash'),400);}
+}
+
+function pushChart(chart,tsLabel,val,ptsId){
+  chart.data.labels.push(tsLabel);chart.data.datasets[0].data.push(val);
+  if(chart.data.labels.length>MAX_POINTS){chart.data.labels.shift();chart.data.datasets[0].data.shift();}
+  chart.update('none');setText(ptsId,chart.data.labels.length+' pts');
+}
+
+function addLog(msg,cls=''){
+  const body=document.getElementById('log-body'),now=new Date().toLocaleTimeString();
+  const row=document.createElement('div');row.className='log-row';
+  row.innerHTML=`<span class="log-ts">${now}</span><span class="log-msg ${cls}">${msg}</span>`;
+  body.prepend(row);while(body.children.length>100)body.removeChild(body.lastChild);
+  logCount++;setText('log-count',logCount+' events');
+}
+
+// ── Process row ───────────────────────────────────────────────────
+function processRow(row){
+  const level=parseFloat(row.ultrasonic_cm)||0,pct=parseFloat(row.water_level_pct)||0;
+  const flow=parseFloat(row.flow_lpm)||0,turb=parseFloat(row.turb_ntu)||0;
+  const ts=row.timestamp?new Date(row.timestamp):new Date();
+  const tsLabel=ts.toLocaleTimeString();
+
+  if(lastTs){intervalMs=ts-lastTs;setText('sb-interval',(intervalMs/1000).toFixed(1)+'s');}
+  lastTs=ts;totalSamples++;setText('sb-total',totalSamples);setText('sb-last',tsLabel);
+
+  setKPI('v-level','d-level','kpi-level',level,1,'ultrasonic_cm');
+  setKPI('v-pct',  'd-pct',  'kpi-pct',  pct,  1,'water_level_pct');
+  setKPI('v-flow', 'd-flow', 'kpi-flow', flow, 2,'flow_lpm');
+  setKPI('v-turb', 'd-turb', 'kpi-turb', turb, 2,'turb_ntu');
+
+  pushChart(charts.level,tsLabel,level,'pts-level');
+  pushChart(charts.turb, tsLabel,turb, 'pts-turb');
+  pushChart(charts.flow, tsLabel,flow, 'pts-flow');
+  pushChart(charts.pct,  tsLabel,pct,  'pts-pct');
+
+  const riskScore=compositeScore(level,turb,flow);
+  const{label:riskLbl,color:riskColor}=scoreLabel(riskScore);
+
+  setText('v-risk',riskScore.toFixed(1));
+  setText('risk-num',riskScore.toFixed(0));
+  setText('risk-lbl',riskLbl.toUpperCase());
+  _audio.onRiskChange(riskLbl);
+
+  const rkd=document.getElementById('d-risk');
+  rkd.textContent='● '+riskLbl.toUpperCase();
+  rkd.className=`kpi-delta ${riskScore<33?'flat':riskScore<66?'down':'up'}`;
+
+  const gf=document.getElementById('gauge-fill');
+  gf.style.width=riskScore+'%';gf.style.background=riskColor;
+  document.getElementById('risk-num').style.color=riskColor;
+  document.getElementById('risk-num').style.textShadow=`0 0 20px ${riskColor}88`;
+  document.getElementById('risk-lbl').style.color=riskColor;
+
+  const rMain=document.getElementById('risk-main');
+  rMain.classList.remove('alert-glow','danger-glow');
+  if(riskScore>=85)rMain.classList.add('danger-glow');
+  else if(riskScore>=33)rMain.classList.add('alert-glow');
+
+  const rKpi=document.getElementById('kpi-risk');
+  rKpi.classList.remove('alert-glow','danger-glow');
+  if(riskScore>=85)rKpi.classList.add('danger-glow');
+  else if(riskScore>=33)rKpi.classList.add('alert-glow');
+
+  [{name:'level',val:level,key:'level_cm'},{name:'turb',val:turb,key:'turb_ntu'},{name:'flow',val:flow,key:'flow_lpm'}]
+  .forEach(({name,val,key})=>{
+    const sc=sensorScore(val,key);
+    const el=document.getElementById(`sb-${name}`),vl=document.getElementById(`sb-v-${name}`);
+    if(el){el.style.width=sc+'%';el.style.background=barColor(sc);}
+    if(vl)vl.textContent=sc.toFixed(0);
+  });
+
+  if(riskScore>=85)addLog(`⚠ CRITICAL — score ${riskScore.toFixed(1)}`,'err');
+  else if(riskScore>=66)addLog(`! HIGH risk — score ${riskScore.toFixed(1)}`,'warn');
+
+  // Proximity alerts specifically for ultrasonic sensor
+  const levelT=THRESHOLDS.level_cm;
+  if(level<=levelT.critical)addLog(`🚨 PROXIMITY CRITICAL — object at ${level.toFixed(1)}cm`,'err');
+  else if(level<=levelT.alert)addLog(`⚡ PROXIMITY ALERT — object at ${level.toFixed(1)}cm (alert threshold: ${levelT.alert}cm)`,'warn');
+
+  prevRow={ultrasonic_cm:level,water_level_pct:pct,flow_lpm:flow,turb_ntu:turb};
+}
+
+// ── Load history ──────────────────────────────────────────────────
+async function loadHistory(){
+  try{
+    const res=await fetch('/data/history?minutes=60'),rows=await res.json();
+    if(rows.length){addLog(`LOADED ${rows.length} HISTORICAL ROWS`,'ok');rows.forEach(r=>processRow(r));}
+  }catch(e){addLog('HISTORY LOAD FAILED: '+e.message,'warn');}
+}
+
+// ── SSE ───────────────────────────────────────────────────────────
+const dot=document.getElementById('conn-dot'),ctxt=document.getElementById('conn-text');
+function setConnState(s){
+  dot.className='conn-dot '+s;
+  ctxt.textContent=s==='connected'?'LINKED // SSE':s==='connecting'?'HANDSHAKING…':'LINK LOST — RETRY…';
+}
+function connectSSE(){
+  setConnState('connecting');
+  const es=new EventSource('/stream');
+  es.addEventListener('heartbeat',()=>{setConnState('connected');addLog('SSE LINK ESTABLISHED','ok');});
+  es.addEventListener('sensor',e=>{try{processRow(JSON.parse(e.data));}catch(err){addLog('PARSE ERROR: '+err.message,'err');}});
+  es.addEventListener('ping',()=>{});
+  es.onerror=()=>{setConnState('disconnected');addLog('LINK LOST — RECONNECTING IN 3s','warn');es.close();setTimeout(connectSSE,3000);};
+}
+
+// ── Clock ─────────────────────────────────────────────────────────
+setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleTimeString(),1000);
+document.getElementById('clock').textContent=new Date().toLocaleTimeString();
+
+// ── Boot sequence ─────────────────────────────────────────────────
+const bootMsgs=['LOADING SENSOR MODULES…','CALIBRATING RISK ENGINE…','ESTABLISHING SSE LINK…','SYSTEM ONLINE.'];
+let bIdx=0;
+const bStat=document.getElementById('boot-status');
+const bTimer=setInterval(()=>{if(bIdx<bootMsgs.length)bStat.textContent=bootMsgs[bIdx++];else clearInterval(bTimer);},450);
+
+(async()=>{
+  await new Promise(r=>setTimeout(r,1800));
+  await loadHistory();
+  connectSSE();
+})();
+</script>
+</body>
+</html>

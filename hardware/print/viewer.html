@@ -1,0 +1,157 @@
+<title>TSF Rig Print Kit</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: 3D assembly viewer on top, then the parts list, buy list and print settings. */
+:root{
+  --bg:#f5f4f0; --panel:#ffffff; --fg:#22241f; --muted:#62655c; --line:#d6d4cb; --accent:#c4621f;
+  --display:"Archivo",system-ui,sans-serif; --body:"Source Sans 3",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17191a;--panel:#202325;--fg:#e8e6df;--muted:#a3a59c;--line:#3a3d3f;--accent:#e38a4f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#17191a;--panel:#202325;--fg:#e8e6df;--muted:#a3a59c;--line:#3a3d3f;--accent:#e38a4f;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.55}
+.wrap{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:36px 64px;display:grid;gap:36px}
+h1,h2{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:2rem;font-weight:800} h2{font-size:1.3rem;font-weight:700}
+p{margin:0;max-width:70ch}
+section{display:grid;gap:12px;min-width:0}
+.eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lede{color:var(--muted);font-size:1.06rem}
+.mono{font-family:var(--mono);font-size:.86em}
+.viewer{background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.v3d{width:100%;min-height:340px;touch-action:none;position:relative}
+.v3d canvas{display:block;width:100%!important}
+.msg{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:.9rem}
+.vbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border-top:1px solid var(--line)}
+button{font-family:var(--mono);font-size:.8rem;padding:6px 12px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);cursor:pointer}
+button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hint{font-size:.8rem;color:var(--muted);margin-left:auto}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:.92rem}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--line)}
+th{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+tr:last-child td{border-bottom:0}
+td.f{font-family:var(--mono);font-size:.84rem;white-space:nowrap}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+ul{margin:0;padding-left:1.2em;display:grid;gap:5px;max-width:72ch}
+</style>
+
+<div class="wrap">
+<header style="display:grid;gap:8px">
+  <div class="eyebrow">Ready to slice · 7 STL files</div>
+  <h1>TSF Rig Print Kit</h1>
+  <p class="lede">The electronics box sits on a 20 mm square bar laid across the tank. The ultrasonic sensor hangs from the bar pointing straight down, and the probes hang on zip-tie arms. The 3D model below uses the same geometry as the STL files.</p>
+</header>
+
+<section>
+  <div class="viewer">
+    <div id="v3d" class="v3d"><div class="msg" id="vmsg">Loading model…</div></div>
+    <div class="vbar">
+      <button id="bTank" type="button" aria-pressed="true">Tank</button>
+      <button id="bLid" type="button" aria-pressed="false">Lift lid</button>
+      <button id="bSpin" type="button" aria-pressed="true">Auto-rotate</button>
+      <button id="bReset" type="button">Reset view</button>
+      <span class="hint">Drag to rotate · scroll to zoom · right-drag to pan</span>
+    </div>
+  </div>
+  <p style="color:var(--muted);font-size:.9rem">Orange = printed parts, grey = the box, silver = the bar you buy. The tank is drawn at 40 × 30 × 29 cm; your bar length only needs to match your own tank.</p>
+</section>
+
+<section>
+  <h2>Files to print</h2>
+  <p>The files are in <span class="mono">hardware/print/stl/</span>, already oriented flat-side-down for printing, so no supports are needed. To change a size, edit the constants at the top of <span class="mono">make_parts.py</span> and run it again.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>File</th><th>Qty</th><th>Size (mm)</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td class="f">box_base.stl</td><td class="n">1</td><td class="n">176 × 116 × 62.5</td><td>Holds the Arduino (UNO standoffs) and the breadboard (retaining frame). Has a USB-C/DC window on the left, 4 cable glands on the right (LEVEL, FLOW, TURB, STRIP), 1 on the back (PUMP), and an IR hole on the front.</td></tr>
+      <tr><td class="f">box_lid.stl</td><td class="n">1</td><td class="n">176 × 116 × 8</td><td>Has an LCD window with 4 M3 screw bosses, a buzzer grille and holder ring, and 4 counterbored corner screws. Prints face-down.</td></tr>
+      <tr><td class="f">saddle.stl</td><td class="n">1</td><td class="n">90 × 36 × 31</td><td>Bolts under the box with 4 × M3 (nut traps) and grips the bar. An M4 bolt under the bar locks it in place.</td></tr>
+      <tr><td class="f">rim_clamp_x2.stl</td><td class="n">2</td><td class="n">68 × 28 × 30</td><td>Slides onto the bar. Its finger rests against the inside of the tank wall so the bar can't slide sideways. Lock it with an M4 screw.</td></tr>
+      <tr><td class="f">sonar_holder.stl</td><td class="n">1</td><td class="n">54 × 86 × 28</td><td>The HC-SR04 drops in with its transducers facing down. The holes are slotted to fit a 24–29 mm transducer spacing.</td></tr>
+      <tr><td class="f">probe_hanger_x2.stl</td><td class="n">2</td><td class="n">30 × 170 × 32</td><td>One for the turbidity probe and one for the red water-level strip. Zip-tie each one at the depth you need.</td></tr>
+      <tr><td class="f">flow_cradle.stl</td><td class="n">1</td><td class="n">70 × 44 × 17</td><td>Holds the YF-S201 on the outlet line, below the tank outlet. Zip ties go through the slots and 2 × M4 screws fix it to the bench.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Buy before printing</h2>
+  <ul>
+    <li><b>20 × 20 mm square bar</b> (aluminium tube or a wooden strip), about 7 cm longer than your tank's width. The bar size is the <span class="mono">BAR</span> constant in the script.</li>
+    <li><b>5 × PG7 cable glands</b> (12.5 mm thread).</li>
+    <li><b>M3 screws:</b> 4 × 10 mm (lid), 4 × 6 mm (Arduino), 4 × 12 mm with nuts (LCD), 4 × 10 mm with nuts (box to saddle).</li>
+    <li><b>M4 screws:</b> 1 × 40 mm bolt with nut (saddle), 3 × 10 mm (thumb screws for the clamps and sonar holder), 2 × wood screws (cradle).</li>
+    <li>Zip ties up to 2.5 mm wide, and some silicone sealant for around the lid if water splashes the box.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Print settings</h2>
+  <ul>
+    <li><b>PETG</b>, 0.2 mm layers, 4 walls, 25% infill, no supports. PLA works if the parts stay dry.</li>
+    <li>The box base takes about 6–7 h and the lid about 2 h on a typical 0.4 mm nozzle printer. All parts fit a 220 × 220 mm bed.</li>
+    <li>Print one rim clamp first and test it on your bar. If it's too tight or too loose, change <span class="mono">FIT</span> (default 0.6 mm) and regenerate.</li>
+  </ul>
+</section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function(){
+  var host=document.getElementById('v3d'), msg=document.getElementById('vmsg');
+  if(!window.THREE||!THREE.OrbitControls){msg.textContent='The 3D view could not load. Reload the page to try again.';return;}
+  var css=function(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();};
+  var renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  host.appendChild(renderer.domElement);
+  var scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(35,1,5,8000);
+  var HOME=new THREE.Vector3(520,420,640), TARGET=new THREE.Vector3(0,-40,0);
+  camera.position.copy(HOME);
+  var controls=new THREE.OrbitControls(camera,renderer.domElement);
+  controls.target.copy(TARGET);controls.enableDamping=true;
+  var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  controls.autoRotate=!reduce;controls.autoRotateSpeed=0.7;
+  scene.add(new THREE.HemisphereLight(0xffffff,0x555555,0.9));
+  var d=new THREE.DirectionalLight(0xffffff,0.7);d.position.set(300,600,400);scene.add(d);
+  var d2=new THREE.DirectionalLight(0xffffff,0.25);d2.position.set(-400,200,-300);scene.add(d2);
+
+  var COLORS={tank:[0xbcd7ea,.18],water:[0x4f8fc4,.35],bar:[0xa9afb5,1],box_base:[0x5d6b78,1],box_lid:[0x6c7b88,1]};
+  var nodes={}, root=new THREE.Group(); root.rotation.x=-Math.PI/2; scene.add(root);
+  function b64(str,Type){var bin=atob(str),buf=new ArrayBuffer(bin.length),u=new Uint8Array(buf);for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new Type(buf);}
+  fetch('assembly.json').then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(parts){
+    msg.remove();
+    parts.forEach(function(pt){
+      var geo=new THREE.BufferGeometry();
+      geo.setAttribute('position',new THREE.BufferAttribute(b64(pt.p,Float32Array),3));
+      geo.setIndex(new THREE.BufferAttribute(b64(pt.i,Uint32Array),1));
+      geo.computeVertexNormals();
+      var key=Object.keys(COLORS).find(function(k){return pt.name.indexOf(k)===0;}), c=key?COLORS[key]:[0xe07a2f,1];
+      var mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:c[0],roughness:.55,metalness:key==='bar'?.5:.05,transparent:c[1]<1,opacity:c[1],depthWrite:c[1]>=1,side:c[1]<1?THREE.DoubleSide:THREE.FrontSide,flatShading:true}));
+      mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo,30),new THREE.LineBasicMaterial({color:0x1d2329,transparent:true,opacity:c[1]<1?.15:.35})));
+      mesh.name=pt.name; nodes[pt.name]=mesh; root.add(mesh);
+    });
+  }).catch(function(){msg.textContent='The model file did not load. Reload the page to try again.';});
+
+  function applyTheme(){renderer.setClearColor(new THREE.Color(css('--panel')||'#ffffff'));}
+  applyTheme();
+  if(window.matchMedia){var mq=matchMedia('(prefers-color-scheme: dark)');mq.addEventListener?mq.addEventListener('change',applyTheme):mq.addListener(applyTheme);}
+  new MutationObserver(applyTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+  function size(){var w=host.clientWidth||600,h=Math.round(Math.max(340,Math.min(600,w*0.66)));renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
+  size(); if(window.ResizeObserver)new ResizeObserver(size).observe(host);
+
+  function toggle(b,on){b.setAttribute('aria-pressed',on?'true':'false');}
+  var bTank=document.getElementById('bTank'),bLid=document.getElementById('bLid'),bSpin=document.getElementById('bSpin');
+  toggle(bSpin,controls.autoRotate);
+  var tankOn=true,lidUp=false,lidZ=0;
+  bTank.addEventListener('click',function(){tankOn=!tankOn;['tank','water'].forEach(function(n){Object.keys(nodes).forEach(function(k){if(k.indexOf(n)===0)nodes[k].visible=tankOn;});});toggle(bTank,tankOn);});
+  bLid.addEventListener('click',function(){lidUp=!lidUp;toggle(bLid,lidUp);});
+  bSpin.addEventListener('click',function(){controls.autoRotate=!controls.autoRotate;toggle(bSpin,controls.autoRotate);});
+  document.getElementById('bReset').addEventListener('click',function(){camera.position.copy(HOME);controls.target.copy(TARGET);controls.update();});
+  controls.addEventListener('start',function(){if(controls.autoRotate){controls.autoRotate=false;toggle(bSpin,false);}});
+  (function loop(){requestAnimationFrame(loop);
+    var lid=Object.keys(nodes).filter(function(k){return k.indexOf('box_lid')===0;})[0];
+    if(lid){lidZ+=((lidUp?90:0)-lidZ)*(reduce?1:.12);nodes[lid].position.z=lidZ;}
+    controls.update();renderer.render(scene,camera);})();
+})();
+</script>

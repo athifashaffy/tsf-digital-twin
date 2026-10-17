@@ -1,0 +1,25 @@
+# Allow-list: only code, firmware, print files and the digital twin are published.
+/*
+!/.gitignore
+!/README.md
+!/booth/
+!/firmware/
+!/hardware/
+!/DATA Server/
+
+# thesis documents, photos, raw data and environments stay private
+*.docx
+*.pptx
+*.pdf
+*.jpeg
+*.jpg
+*.png
+*.csv
+.venv/
+.venv-mac/
+__pycache__/
+.DS_Store
+DATA Server/buzzer_alert.txt
+DATA Server/Fresh STEPS.txt
+config.bat
+node_modules
