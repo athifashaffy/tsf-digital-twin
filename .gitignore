@@ -21,5 +21,4 @@ __pycache__/
 .DS_Store
 DATA Server/buzzer_alert.txt
 DATA Server/Fresh STEPS.txt
-config.bat
 node_modules
